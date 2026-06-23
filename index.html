@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kudrant Lab — DBA Morning Health Check Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Playfair+Display:wght@700&family=DM+Mono&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --dark:#12141C;--dark2:#1E2130;--dark3:#252838;
+  --cyan:#43C6DB;--cyan-d:#2A9DB0;
+  --coral:#E76F51;--amber:#F4A261;--amber-d:#C8860A;
+  --green:#2E7D52;--plum:#7A52A8;
+  --off:#F8F9FC;--card:#FFFFFF;--border:#E4E6ED;
+  --gray:#5A5C6B;--lgray:#9A9CAB;
+  --serif:'Playfair Display',Georgia,serif;
+  --sans:'DM Sans',sans-serif;
+  --mono:'DM Mono','Courier New',monospace;
+}
+body{font-family:var(--sans);background:var(--off);color:var(--gray);line-height:1.7;font-size:16px}
+.container{max-width:880px;margin:0 auto;padding:20px 16px}
+.hero{background:var(--dark);color:#fff;padding:48px 32px;text-align:center;border-radius:0 0 14px 14px;border-top:5px solid var(--cyan)}
+.hero .badge{display:inline-block;background:var(--cyan-d);color:#fff;font-size:0.75em;font-weight:700;padding:4px 14px;border-radius:4px;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px}
+.hero h1{font-family:var(--serif);font-size:2.2em;margin-bottom:8px}
+.hero .sub{color:var(--cyan);font-size:1.05em;margin-bottom:4px}
+.hero .meta{color:var(--lgray);font-size:0.88em}
+
+.intro{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:24px 28px;margin:28px 0}
+.intro p{margin-bottom:10px;font-size:0.95em}
+.intro strong{color:var(--dark)}
+
+.check-section{margin:32px 0}
+.check-header{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.check-num{background:var(--dark);color:var(--cyan);font-family:var(--serif);font-size:1.8em;font-weight:700;width:52px;height:52px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.check-info h2{font-family:var(--serif);font-size:1.35em;color:var(--dark)}
+.check-info .time{font-size:0.82em;color:var(--cyan-d);font-weight:600}
+
+.check-body{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.check-why{padding:18px 24px;font-size:0.93em;border-bottom:1px solid var(--border)}
+.check-why strong{color:var(--dark)}
+
+.sql-block{background:var(--dark);padding:20px 24px;position:relative}
+.sql-label{font-size:0.72em;font-weight:700;color:var(--cyan);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
+.sql-code{font-family:var(--mono);font-size:0.88em;color:#E0E4EC;line-height:1.8;white-space:pre-wrap;word-wrap:break-word}
+.sql-code .kw{color:var(--cyan)}
+.sql-code .fn{color:var(--amber)}
+.sql-code .str{color:#8BC38B}
+.sql-code .cm{color:#6B7394;font-style:italic}
+
+.check-result{padding:16px 24px;border-top:1px solid var(--border);background:#F6F8FA}
+.check-result .result-label{font-size:0.78em;font-weight:700;color:var(--amber-d);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.check-result p{font-size:0.9em;color:var(--gray)}
+
+.check-action{padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:20px;flex-wrap:wrap}
+.action-do,.action-dont{flex:1;min-width:200px;padding:8px 0}
+.action-do .tag{color:var(--green);font-weight:700;font-size:0.8em;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.action-dont .tag{color:var(--coral);font-weight:700;font-size:0.8em;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.action-do li,.action-dont li{font-size:0.88em;margin:4px 0 4px 16px;color:var(--gray)}
+
+.callout{padding:14px 20px;border-radius:8px;margin:16px 0;font-size:0.9em}
+.callout.cyan{background:#EAF8FA;border-left:4px solid var(--cyan)}
+.callout.coral{background:#FFF0EC;border-left:4px solid var(--coral)}
+.callout.amber{background:#FFF6E8;border-left:4px solid var(--amber)}
+.callout.dark{background:var(--dark);color:#fff;border-left:4px solid var(--cyan)}
+.callout strong{font-weight:700}
+
+.summary-box{background:var(--dark);color:#fff;border-radius:10px;padding:28px 32px;margin:32px 0}
+.summary-box h3{font-family:var(--serif);font-size:1.2em;color:var(--cyan);margin-bottom:12px}
+.summary-box ol{padding-left:20px}
+.summary-box li{margin:8px 0;color:#CCD0DC;font-size:0.93em}
+.summary-box .time-total{color:var(--amber);font-weight:700;font-size:1.05em;margin-top:14px}
+
+.footer{text-align:center;padding:32px 0;color:var(--lgray);font-size:0.82em}
+.footer .brand{color:var(--cyan);font-weight:700}
+
+@media print{
+  .hero{border-radius:0}
+  .sql-block{background:#1a1a2e !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+@media(max-width:600px){
+  .hero{padding:32px 16px}
+  .hero h1{font-size:1.6em}
+  .check-header{flex-direction:column;align-items:flex-start;gap:8px}
+  .check-action{flex-direction:column;gap:8px}
+  .sql-block{padding:14px 12px}
+  .sql-code{font-size:0.8em}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="badge">GUIDES &amp; SOPs</div>
+  <h1>DBA Morning Health Check</h1>
+  <div class="sub">5 checks. 5 minutes. Every morning.</div>
+  <div class="meta">Phase 5 — Work Like a Pro · Kudrant Lab</div>
+</div>
+
+<div class="container">
+
+<div class="intro">
+  <p><strong>What this is:</strong> The exact Oracle SQL queries and commands for your daily morning health check. Run these five checks every morning before you do anything else. Save them in a script file so they're one copy-paste away.</p>
+  <p><strong>Why it matters:</strong> A DBA who runs a morning checklist rarely gets blindsided. A DBA who skips it eventually gets a very bad surprise. This routine turns a 30-minute nervous check into a confident 5-minute habit.</p>
+  <p><strong>How to use it:</strong> Run each query in order. Read what it tells you. Act on anything that looks wrong. Document and move on.</p>
+</div>
+
+<!-- CHECK 1 -->
+<div class="check-section">
+  <div class="check-header">
+    <div class="check-num">1</div>
+    <div class="check-info"><h2>Check Instance Status & Uptime</h2><div class="time">⏱ ~30 seconds</div></div>
+  </div>
+  <div class="check-body">
+    <div class="check-why"><strong>Why:</strong> Confirm every database is up, open, and has been running since you expect. If an instance restarted overnight without your knowledge, you need to know immediately.</div>
+    <div class="sql-block">
+      <div class="sql-label">SQL — Run as SYS or DBA-privileged user</div>
+      <div class="sql-code"><span class="cm">-- Check instance status and uptime</span>
+<span class="kw">SELECT</span>
+    <span class="fn">instance_name</span>,
+    <span class="fn">status</span>,
+    <span class="fn">database_status</span>,
+    <span class="fn">startup_time</span>,
+    <span class="fn">ROUND</span>((<span class="fn">SYSDATE</span> - <span class="fn">startup_time</span>), 2) <span class="kw">AS</span> uptime_days
+<span class="kw">FROM</span> v$instance;
+
+<span class="cm">-- Check database open mode</span>
+<span class="kw">SELECT</span>
+    <span class="fn">name</span>,
+    <span class="fn">open_mode</span>,
+    <span class="fn">log_mode</span>,
+    <span class="fn">database_role</span>
+<span class="kw">FROM</span> v$database;</div>
+    </div>
+    <div class="check-result">
+      <div class="result-label">What a healthy result looks like</div>
+      <p>STATUS = OPEN, DATABASE_STATUS = ACTIVE, OPEN_MODE = READ WRITE. Uptime should match when you expect the database was last started. If uptime is suspiciously low (e.g., 0.2 days when it should be 30+), the instance restarted — investigate why.</p>
+    </div>
+    <div class="check-action">
+      <div class="action-do"><div class="tag">✅ If healthy</div><ul><li>Confirm and move to Check 2</li></ul></div>
+      <div class="action-dont"><div class="tag">🚨 If not healthy</div><ul><li>Instance restarted? Check alert log immediately for the cause</li><li>Status not OPEN? Investigate before users notice</li></ul></div>
+    </div>
+  </div>
+</div>
+
+<!-- CHECK 2 -->
+<div class="check-section">
+  <div class="check-header">
+    <div class="check-num">2</div>
+    <div class="check-info"><h2>Verify Last Night's Backups</h2><div class="time">⏱ ~45 seconds</div></div>
+  </div>
+  <div class="check-body">
+    <div class="check-why"><strong>Why:</strong> A backup that silently failed is exactly the kind of thing that ends careers. Check completion status, not just whether it started. Know when your last successful backup was — that's your real exposure window.</div>
+    <div class="sql-block">
+      <div class="sql-label">SQL — RMAN backup history</div>
+      <div class="sql-code"><span class="cm">-- Last 7 days of RMAN backup status</span>
+<span class="kw">SELECT</span>
+    <span class="fn">session_key</span>,
+    <span class="fn">input_type</span>,
+    <span class="fn">status</span>,
+    <span class="fn">TO_CHAR</span>(<span class="fn">start_time</span>, <span class="str">'YYYY-MM-DD HH24:MI'</span>) <span class="kw">AS</span> start_time,
+    <span class="fn">TO_CHAR</span>(<span class="fn">end_time</span>,   <span class="str">'YYYY-MM-DD HH24:MI'</span>) <span class="kw">AS</span> end_time,
+    <span class="fn">ROUND</span>(<span class="fn">elapsed_seconds</span>/60, 1) <span class="kw">AS</span> duration_min
+<span class="kw">FROM</span> v$rman_backup_job_details
+<span class="kw">WHERE</span> <span class="fn">start_time</span> > <span class="fn">SYSDATE</span> - 7
+<span class="kw">ORDER BY</span> <span class="fn">start_time</span> <span class="kw">DESC</span>;
+
+<span class="cm">-- Quick check: when was the LAST successful backup?</span>
+<span class="kw">SELECT</span>
+    <span class="fn">MAX</span>(<span class="fn">end_time</span>) <span class="kw">AS</span> last_successful_backup
+<span class="kw">FROM</span> v$rman_backup_job_details
+<span class="kw">WHERE</span> <span class="fn">status</span> = <span class="str">'COMPLETED'</span>
+    <span class="kw">AND</span> <span class="fn">input_type</span> <span class="kw">IN</span> (<span class="str">'DB FULL'</span>, <span class="str">'DB INCR'</span>);</div>
+    </div>
+    <div class="check-result">
+      <div class="result-label">What a healthy result looks like</div>
+      <p>Last night's backup shows STATUS = COMPLETED. The last successful backup should be within the last 24 hours. If STATUS = FAILED or COMPLETED WITH WARNINGS, or if the last successful backup is more than 24 hours old, act immediately.</p>
+    </div>
+    <div class="check-action">
+      <div class="action-do"><div class="tag">✅ If healthy</div><ul><li>Backup completed — you're protected. Move on.</li></ul></div>
+      <div class="action-dont"><div class="tag">🚨 If failed</div><ul><li>Check the RMAN log for the failure reason</li><li>Fix the cause and run a manual backup NOW</li><li>Never let a failed backup slide — fix same morning</li></ul></div>
+    </div>
+  </div>
+</div>
+
+<!-- CHECK 3 -->
+<div class="check-section">
+  <div class="check-header">
+    <div class="check-num">3</div>
+    <div class="check-info"><h2>Scan the Alert Log for Errors</h2><div class="time">⏱ ~60 seconds</div></div>
+  </div>
+  <div class="check-body">
+    <div class="check-why"><strong>Why:</strong> The alert log is the database's diary. If something went wrong overnight — an ORA error, a space warning, a failed process — it's recorded here. Catching it now means you act before users report symptoms.</div>
+    <div class="sql-block">
+      <div class="sql-label">SQL — Query alert log (12c and later)</div>
+      <div class="sql-code"><span class="cm">-- Last 24 hours of alert log errors and warnings</span>
+<span class="kw">SELECT</span>
+    <span class="fn">TO_CHAR</span>(<span class="fn">originating_timestamp</span>, <span class="str">'YYYY-MM-DD HH24:MI:SS'</span>) <span class="kw">AS</span> alert_time,
+    <span class="fn">message_type</span>,
+    <span class="fn">message_text</span>
+<span class="kw">FROM</span> v$diag_alert_ext
+<span class="kw">WHERE</span> <span class="fn">originating_timestamp</span> > <span class="fn">SYSDATE</span> - 1
+    <span class="kw">AND</span> <span class="fn">message_type</span> <span class="kw">IN</span> (1, 2)  <span class="cm">-- 1=ERROR, 2=WARNING</span>
+<span class="kw">ORDER BY</span> <span class="fn">originating_timestamp</span> <span class="kw">DESC</span>;</div>
+    </div>
+    <div class="sql-block" style="border-top:1px solid #2a2d3a">
+      <div class="sql-label">Alternative — Linux command line (any version)</div>
+      <div class="sql-code"><span class="cm"># Tail the last 100 lines of the alert log</span>
+tail -100 $ORACLE_BASE/diag/rdbms/<span class="str">&lt;db_name&gt;</span>/<span class="str">&lt;instance&gt;</span>/trace/alert_<span class="str">&lt;instance&gt;</span>.log
+
+<span class="cm"># Search for ORA- errors in the last 24 hours</span>
+grep -i <span class="str">"ORA-"</span> $ORACLE_BASE/diag/rdbms/<span class="str">&lt;db_name&gt;</span>/<span class="str">&lt;instance&gt;</span>/trace/alert_<span class="str">&lt;instance&gt;</span>.log | tail -20</div>
+    </div>
+    <div class="check-result">
+      <div class="result-label">What a healthy result looks like</div>
+      <p>No rows returned, or only informational messages (not errors). Common benign entries include scheduled job completions and log switches. ORA- errors, especially ORA-00600 (internal error), ORA-07445 (OS exception), or space-related errors need investigation.</p>
+    </div>
+    <div class="check-action">
+      <div class="action-do"><div class="tag">✅ If clean</div><ul><li>No errors overnight — great. Move on.</li></ul></div>
+      <div class="action-dont"><div class="tag">🚨 If errors found</div><ul><li>Read the full error in context — what happened before and after?</li><li>Search the ORA code to understand the cause</li><li>Assess severity: is it impacting users right now?</li></ul></div>
+    </div>
+  </div>
+</div>
+
+<!-- CHECK 4 -->
+<div class="check-section">
+  <div class="check-header">
+    <div class="check-num">4</div>
+    <div class="check-info"><h2>Check Tablespace & Archive Space</h2><div class="time">⏱ ~45 seconds</div></div>
+  </div>
+  <div class="check-body">
+    <div class="check-why"><strong>Why:</strong> Space issues are the most preventable emergencies. A tablespace that hits 100% stops the database from writing. An archive destination that fills up can hang the entire instance. Catch it at 85% and fix it calmly.</div>
+    <div class="sql-block">
+      <div class="sql-label">SQL — All tablespace usage in one query</div>
+      <div class="sql-code"><span class="cm">-- Tablespace usage summary (shows % used)</span>
+<span class="kw">SELECT</span>
+    df.<span class="fn">tablespace_name</span>,
+    <span class="fn">ROUND</span>(df.total_mb, 1) <span class="kw">AS</span> total_mb,
+    <span class="fn">ROUND</span>(df.total_mb - <span class="fn">NVL</span>(fs.free_mb, 0), 1) <span class="kw">AS</span> used_mb,
+    <span class="fn">ROUND</span>(<span class="fn">NVL</span>(fs.free_mb, 0), 1) <span class="kw">AS</span> free_mb,
+    <span class="fn">ROUND</span>(((df.total_mb - <span class="fn">NVL</span>(fs.free_mb, 0)) / df.total_mb) * 100, 1) <span class="kw">AS</span> pct_used
+<span class="kw">FROM</span>
+    (<span class="kw">SELECT</span> <span class="fn">tablespace_name</span>, <span class="fn">SUM</span>(<span class="fn">bytes</span>)/1024/1024 total_mb
+     <span class="kw">FROM</span> dba_data_files <span class="kw">GROUP BY</span> <span class="fn">tablespace_name</span>) df
+<span class="kw">LEFT JOIN</span>
+    (<span class="kw">SELECT</span> <span class="fn">tablespace_name</span>, <span class="fn">SUM</span>(<span class="fn">bytes</span>)/1024/1024 free_mb
+     <span class="kw">FROM</span> dba_free_space <span class="kw">GROUP BY</span> <span class="fn">tablespace_name</span>) fs
+<span class="kw">ON</span> df.<span class="fn">tablespace_name</span> = fs.<span class="fn">tablespace_name</span>
+<span class="kw">ORDER BY</span> pct_used <span class="kw">DESC</span>;</div>
+    </div>
+    <div class="sql-block" style="border-top:1px solid #2a2d3a">
+      <div class="sql-label">SQL — Archive log destination space</div>
+      <div class="sql-code"><span class="cm">-- Check archive destination usage</span>
+<span class="kw">SELECT</span>
+    <span class="fn">dest_name</span>,
+    <span class="fn">status</span>,
+    <span class="fn">destination</span>,
+    <span class="fn">space_used</span>,
+    <span class="fn">space_limit</span>,
+    <span class="fn">ROUND</span>((<span class="fn">space_used</span>/<span class="fn">NULLIF</span>(<span class="fn">space_limit</span>,0))*100, 1) <span class="kw">AS</span> pct_used
+<span class="kw">FROM</span> v$archive_dest_status
+<span class="kw">WHERE</span> <span class="fn">status</span> = <span class="str">'VALID'</span>;</div>
+    </div>
+    <div class="sql-block" style="border-top:1px solid #2a2d3a">
+      <div class="sql-label">Linux — Check disk space</div>
+      <div class="sql-code"><span class="cm"># Overall disk space on the server</span>
+df -h
+
+<span class="cm"># Focus on Oracle-related mount points</span>
+df -h | grep -iE <span class="str">"oracle|data|arch|redo|backup"</span></div>
+    </div>
+    <div class="check-result">
+      <div class="result-label">What a healthy result looks like</div>
+      <p>All tablespaces below 85% used. Archive destination has ample free space. Disk mounts are not approaching capacity. Anything over 85% is a yellow flag. Anything over 95% is a red flag — act immediately.</p>
+    </div>
+    <div class="check-action">
+      <div class="action-do"><div class="tag">✅ If under 85%</div><ul><li>All clear — move to Check 5</li></ul></div>
+      <div class="action-dont"><div class="tag">🚨 If over 85%</div><ul><li>85-95%: plan to add space today — add datafiles or extend</li><li>95%+: act NOW — this can crash the database within hours</li><li>Archive full: purge old logs or add space immediately</li></ul></div>
+    </div>
+  </div>
+</div>
+
+<!-- CHECK 5 -->
+<div class="check-section">
+  <div class="check-header">
+    <div class="check-num">5</div>
+    <div class="check-info"><h2>List Failed Scheduler Jobs</h2><div class="time">⏱ ~30 seconds</div></div>
+  </div>
+  <div class="check-body">
+    <div class="check-why"><strong>Why:</strong> Scheduled jobs run critical operations overnight — stats gathering, data loads, cleanup tasks. A failed job might not alert you directly, but its downstream effects (slow queries, space buildup, stale data) will become someone's urgent complaint if you don't catch it first.</div>
+    <div class="sql-block">
+      <div class="sql-label">SQL — Failed scheduler jobs in the last 24 hours</div>
+      <div class="sql-code"><span class="cm">-- Failed DBMS_SCHEDULER jobs in the last 24 hours</span>
+<span class="kw">SELECT</span>
+    <span class="fn">job_name</span>,
+    <span class="fn">status</span>,
+    <span class="fn">TO_CHAR</span>(<span class="fn">actual_start_date</span>, <span class="str">'YYYY-MM-DD HH24:MI'</span>) <span class="kw">AS</span> start_time,
+    <span class="fn">error#</span>,
+    <span class="fn">SUBSTR</span>(<span class="fn">additional_info</span>, 1, 200) <span class="kw">AS</span> error_info
+<span class="kw">FROM</span> dba_scheduler_job_run_details
+<span class="kw">WHERE</span> <span class="fn">actual_start_date</span> > <span class="fn">SYSDATE</span> - 1
+    <span class="kw">AND</span> <span class="fn">status</span> = <span class="str">'FAILED'</span>
+<span class="kw">ORDER BY</span> <span class="fn">actual_start_date</span> <span class="kw">DESC</span>;
+
+<span class="cm">-- Also check for long-running jobs still executing</span>
+<span class="kw">SELECT</span>
+    <span class="fn">job_name</span>,
+    <span class="fn">state</span>,
+    <span class="fn">TO_CHAR</span>(<span class="fn">last_start_date</span>, <span class="str">'YYYY-MM-DD HH24:MI'</span>) <span class="kw">AS</span> started,
+    <span class="fn">ROUND</span>((<span class="fn">SYSDATE</span> - <span class="fn">last_start_date</span>) * 24, 1) <span class="kw">AS</span> running_hours
+<span class="kw">FROM</span> dba_scheduler_jobs
+<span class="kw">WHERE</span> <span class="fn">state</span> = <span class="str">'RUNNING'</span>;</div>
+    </div>
+    <div class="check-result">
+      <div class="result-label">What a healthy result looks like</div>
+      <p>No failed jobs returned. If the second query returns running jobs, check whether the run time is normal for that job. A stats-gathering job running for 2 hours may be fine; a 5-minute cleanup job running for 8 hours is not.</p>
+    </div>
+    <div class="check-action">
+      <div class="action-do"><div class="tag">✅ If no failures</div><ul><li>All jobs completed — morning check is done</li></ul></div>
+      <div class="action-dont"><div class="tag">🚨 If jobs failed</div><ul><li>Read the error info to understand why</li><li>Determine impact: is this job critical or can it wait?</li><li>Rerun the job manually if needed, or fix the underlying cause</li></ul></div>
+    </div>
+  </div>
+</div>
+
+<!-- SUMMARY -->
+<div class="summary-box">
+  <h3>Your 5-Minute Morning Routine — Summary</h3>
+  <ol>
+    <li><strong>Instance status & uptime</strong> — confirm every database is OPEN and running since you expect (~30 sec)</li>
+    <li><strong>Backup verification</strong> — confirm last night's backup COMPLETED, know your last successful backup (~45 sec)</li>
+    <li><strong>Alert log scan</strong> — check for ORA errors or warnings overnight (~60 sec)</li>
+    <li><strong>Space check</strong> — tablespaces, archive, and disk all under 85% (~45 sec)</li>
+    <li><strong>Failed jobs</strong> — no failed scheduler jobs, no abnormally long-running jobs (~30 sec)</li>
+  </ol>
+  <div class="time-total">Total: ~3.5 minutes once you have the queries saved. Add coffee time and you're at 5.</div>
+</div>
+
+<div class="callout cyan">
+  <strong>Pro tip:</strong> Save all five queries in a single SQL file on your desktop. Every morning, open it, run them in order, read the results. Within a week this becomes muscle memory. Within a month you won't even think about it — you'll just do it, and you'll never be blindsided again.
+</div>
+
+<div class="callout amber">
+  <strong>Save this guide:</strong> Bookmark it, print it, or save the queries in your personal cheat-sheet file. This is the foundation of working like a pro. The DBAs who run this every morning are the ones who look calm and prepared — because they are.
+</div>
+
+</div>
+
+<div class="footer">
+  <span class="brand">KUDRANT LAB</span> · DBA Morning Health Check Guide · Phase 5 — Work Like a Pro<br>
+  Guides & SOPs Library
+</div>
+
+</body>
+</html>
